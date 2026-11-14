@@ -285,10 +285,10 @@ int main(int argc, char* argv[]) {
         }
         json_ss << "  ],\n";
 
-        // Tree samples: top 15 largest entries
+        // Tree samples: top 100 largest entries
         DirectoryScanner::sort_entries_by_allocated_size(scan_res.entries);
         json_ss << "  \"tree\": [\n";
-        size_t max_tree = std::min<size_t>(scan_res.entries.size(), 15);
+        size_t max_tree = std::min<size_t>(scan_res.entries.size(), (size_t)100);
         for (size_t i = 0; i < max_tree; ++i) {
             const auto& e = scan_res.entries[i];
             json_ss << "    {\n"
