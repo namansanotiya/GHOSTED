@@ -66,8 +66,10 @@ def main():
     sys.stdout.write(json.dumps(metadata) + "\n")
     sys.stdout.flush()
 
-    # Keep descriptor open while test runner inspects
-    max_sleep = int(os.environ.get("GHOSTDISK_WORKLOAD_TIMEOUT", "60"))
+    # Keep descriptor open while test runner inspects (default 600s = 10 minutes)
+    max_sleep = int(os.environ.get("GHOSTDISK_WORKLOAD_TIMEOUT", "600"))
+    sys.stderr.write(f"\n>>> [WORKLOAD ACTIVE] Holding 10 MB deleted file open on PID {os.getpid()} for {max_sleep}s!\n>>> Go to your browser now and click 'Scan Disk'. (Press Ctrl+C to stop when done)\n\n")
+    sys.stderr.flush()
     start_time = time.time()
 
     while running and (time.time() - start_time < max_sleep):
