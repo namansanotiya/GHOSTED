@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <string>
 #include <vector>
+#include <set>
 #include <chrono>
 #include <ctime>
 #include <sstream>
@@ -285,20 +286,45 @@ int main(int argc, char* argv[]) {
         }
         json_ss << "  ],\n";
 
-        // Tree samples: top 100 largest entries
+        // Tree samples: top allocated entries + top sparse files (large apparent size)
+        std::vector<DirectoryEntry> export_tree;
+        std::set<std::string> seen_paths;
+
+        // 1. Top entries by actual physical disk allocation
         DirectoryScanner::sort_entries_by_allocated_size(scan_res.entries);
-        json_ss << "  \"tree\": [\n";
-        size_t max_tree = std::min<size_t>(scan_res.entries.size(), (size_t)100);
-        for (size_t i = 0; i < max_tree; ++i) {
+        size_t max_alloc = std::min<size_t>(scan_res.entries.size(), (size_t)80);
+        for (size_t i = 0; i < max_alloc; ++i) {
+            export_tree.push_back(scan_res.entries[i]);
+            seen_paths.insert(scan_res.entries[i].path);
+        }
+
+        // 2. Top entries by apparent size (catches sparse files where allocated == 0 but apparent is huge)
+        DirectoryScanner::sort_entries_by_apparent_size(scan_res.entries);
+        size_t max_apparent = std::min<size_t>(scan_res.entries.size(), (size_t)30);
+        for (size_t i = 0; i < max_apparent; ++i) {
             const auto& e = scan_res.entries[i];
+            if (seen_paths.find(e.path) == seen_paths.end()) {
+                export_tree.push_back(e);
+                seen_paths.insert(e.path);
+            }
+        }
+
+        json_ss << "  \"tree\": [\n";
+        for (size_t i = 0; i < export_tree.size(); ++i) {
+            const auto& e = export_tree[i];
+            std::string type_label = entry_type_to_string(e.entry_type);
+            if (e.entry_type == EntryType::File && e.apparent_bytes > e.allocated_bytes + (1024 * 1024)) {
+                type_label = "Sparse File";
+            }
+
             json_ss << "    {\n"
                 << "      \"path\": \"" << escape_json(e.path) << "\",\n"
                 << "      \"allocated\": \"" << format_bytes(e.allocated_bytes) << "\",\n"
                 << "      \"apparent\": \"" << format_bytes(e.apparent_bytes) << "\",\n"
-                << "      \"type\": \"" << entry_type_to_string(e.entry_type) << "\",\n"
+                << "      \"type\": \"" << type_label << "\",\n"
                 << "      \"dev\": \"" << e.device_id << "\",\n"
                 << "      \"ino\": \"" << e.inode << "\"\n"
-                << "    }" << (i + 1 < max_tree ? "," : "") << "\n";
+                << "    }" << (i + 1 < export_tree.size() ? "," : "") << "\n";
         }
         json_ss << "  ]\n"
             << "}\n";
