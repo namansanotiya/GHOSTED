@@ -28,8 +28,8 @@ def main():
     FILE_SIZE_BYTES = 10 * 1024 * 1024
 
     # Create temporary file
-    temp_dir = tempfile.gettempdir()
-    test_filepath = os.path.join(temp_dir, f"ghostdisk_t2_workload_{os.getpid()}.tmp")
+    target_dir = sys.argv[1] if len(sys.argv) > 1 else os.environ.get("GHOSTDISK_WORKLOAD_DIR", tempfile.gettempdir())
+    test_filepath = os.path.join(target_dir, f"ghostdisk_t2_workload_{os.getpid()}.tmp")
 
     # Write 10 MB
     with open(test_filepath, "wb") as f_prep:
